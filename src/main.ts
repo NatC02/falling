@@ -121,7 +121,7 @@ const orbitConfig = {
     radius: 2,    // Distance from center
     speed: 0.3,   // Rotation speed
     height: 1,   // Vertical offset from center
-    fileName: '/character/colin2.glb', // Different model file
+    fileName: '/character/colin.glb', // Different model file
     collisionRadius: 0.6, // Collision radius for this model
     fadeState: 'visible', // Current fade state: 'visible', 'fading-out', 'invisible', 'fading-in'
     fadeProgress: 0,      // Progress of current fade (0-1)
@@ -131,7 +131,7 @@ const orbitConfig = {
     radius: 2,
     speed: 0.4,
     height: 1,
-    fileName: '/character/mr-toad2.glb', // Different model file
+    fileName: '/character/mr-toad.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
@@ -141,18 +141,17 @@ const orbitConfig = {
     radius: 2,
     speed: 0.2,
     height: 1,
-    fileName: '/character/snow-white2.glb', // Different model file
+    fileName: '/character/snow-white.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
     lastCollisionTime: 0
   },
-  // Added new models
   model4: {
-    radius: 2.2,   // Slightly different radius to create varied orbits
-    speed: 0.35,  // Speed within limit of 3
+    radius: 2.2,
+    speed: 0.35,
     height: 1,
-    fileName: '/character/beauty2.glb', // New model file
+    fileName: '/character/beauty.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
@@ -160,9 +159,9 @@ const orbitConfig = {
   },
   model5: {
     radius: 2.4,
-    speed: 0.45,  // Speed within limit of 3
+    speed: 0.45,
     height: 1,
-    fileName: '/character/bufkin2.glb', // New model file
+    fileName: '/character/bufkin.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
@@ -170,9 +169,9 @@ const orbitConfig = {
   },
   model6: {
     radius: 2.6,
-    speed: 0.25,  // Speed within limit of 3
+    speed: 0.25,
     height: 1,
-    fileName: '/character/beast2.glb', // New model file
+    fileName: '/character/beast.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
@@ -180,9 +179,9 @@ const orbitConfig = {
   },
   model7: {
     radius: 2.8,
-    speed: 0.5,   // Speed within limit of 3
+    speed: 0.5,
     height: 1,
-    fileName: '/character/bloody-mary2.glb', // New model file
+    fileName: '/character/bloody-mary.glb',
     collisionRadius: 0.6,
     fadeState: 'visible',
     fadeProgress: 0,
@@ -232,7 +231,6 @@ function preloadAllModels() {
   loadingScreen.appendChild(progressBarContainer);
   document.body.appendChild(loadingScreen);
 
-  // Update progress bar function
   function updateProgress() {
     const progress = (loadedModelsCount / totalModelsToLoad) * 100;
     progressBar.style.width = progress + '%';
