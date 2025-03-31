@@ -408,3 +408,132 @@ function loadNewModels() {
     }
   });
 }
+
+// Detect potential collisions between models
+function checkCollision(modelA, modelB) {
+  const posA = modelA.position.clone();
+  const posB = modelB.position.clone();
+
+  // Calculate distance between models and determine if they're too close
+  posA.y = 0;
+  posB.y = 0;
+  const distance = posA.distanceTo(posB);
+
+  // Get combined collision radius
+  const combinedRadius = modelA.userData.collisionRadius + modelB.userData.collisionRadius;
+
+  // Return true if they are colliding or about to collide
+  return distance < combinedRadius;
+}
+
+// Handle model interactions when collision occurs
+function handleCollision(modelA, modelB) {
+  // Determine which model is moving faster
+  const speedA = Math.abs(modelA.userData.orbitSpeed);
+  const speedB = Math.abs(modelB.userData.orbitSpeed);
+
+  // Select the faster model to fade out
+  const fasterModel = speedA > speedB ? modelA : modelB;
+
+  // Calculate time since last collision
+  const currentTime = clock.getElapsedTime();
+  const timeSinceLastCollision = currentTime - fasterModel.userData.lastCollisionTime;
+
+  // Only fade out if the model has been visible for minimum time
+  if (fasterModel.userData.fadeState === 'visible' && timeSinceLastCollision > minVisibilityTime) {
+    fasterModel.userData.fadeState = 'fading-out';
+    fasterModel.userData.fadeProgress = 0;
+    fasterModel.userData.lastCollisionTime = currentTime;
+    console.log(`Collision detected! ${fasterModel.userData.configKey} is fading out.`);
+  }
+}
+
+// Manage model visibility and fade animations
+function updateModelFade(model, deltaTime) {
+  const fadeState = model.userData.fadeState;
+  let opacity = newModelsOpacity; // Default opacity when fully visible
+
+  if (fadeState === 'fading-out') {
+    // Progress the fade-out animation
+    model.userData.fadeProgress += deltaTime / fadeOutDuration;
+
+    if (model.userData.fadeProgress >= 1.0) {
+      // Fade out complete, now invisible
+      model.userData.fadeState = 'invisible';
+      model.userData.fadeProgress = 0;
+      opacity = 0;
+
+      // Ensure it's completely hidden by removing from scene temporarily
+      if (model.parent) {
+        model.userData.originalParent = model.parent;
+        model.parent.remove(model);
+      }
+    } else {
+      // Interpolate opacity from visible to invisible
+      opacity = newModelsOpacity * (1.0 - model.userData.fadeProgress);
+    }
+  }
+  else if (fadeState === 'invisible') {
+    // Stay invisible until collision is resolved
+    // We don't automatically transition to fading-in here
+    // The collision detection system will determine when to start fading back in
+    opacity = 0;
+  }
+  else if (fadeState === 'fading-in') {
+    // If the model was completely removed from the scene, add it back first
+    if (model.userData.originalParent && !model.parent) {
+      model.userData.originalParent.add(model);
+      model.userData.originalParent = null;
+    }
+
+    // Progress the fade-in animation
+    model.userData.fadeProgress += deltaTime / fadeInDuration;
+
+    if (model.userData.fadeProgress >= 1.0) {
+      // Fade in complete, now visible
+      model.userData.fadeState = 'visible';
+      model.userData.fadeProgress = 0;
+      opacity = newModelsOpacity;
+    } else {
+      // Interpolate opacity from invisible to visible
+      opacity = newModelsOpacity * model.userData.fadeProgress;
+    }
+  }
+
+  // Apply the calculated opacity to all materials in the model
+  // If model is supposed to be invisible, hide it completely by toggling visibility
+  const shouldBeVisible = opacity > 0;
+  model.visible = shouldBeVisible;
+
+  // Still update the opacity for smooth transitions when visible
+  if (shouldBeVisible) {
+    model.traverse((node) => {
+      if (node.isMesh && node.material) {
+        if (Array.isArray(node.material)) {
+          node.material.forEach(material => {
+            material.opacity = opacity;
+          });
+        } else {
+          node.material.opacity = opacity;
+        }
+      }
+    });
+  }
+}
+
+// Add lighting to create depth and atmosphere
+const blueLight = new THREE.DirectionalLight(0x447EFF, 2); // Blue color approximating 1000K
+blueLight.position.set(2, 3, 2); // Diagonal position from top
+scene.add(blueLight);
+
+// Add ambient light to prevent complete darkness
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Soft ambient light
+scene.add(ambientLight);
+
+// Set up animation mixers
+let mixer = null; // For animations
+let mainModel = null;
+
+// Start preloading all models
+preloadAllModels();
+
