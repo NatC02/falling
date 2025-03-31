@@ -537,3 +537,263 @@ let mainModel = null;
 // Start preloading all models
 preloadAllModels();
 
+// Handle resizing for camera
+window.addEventListener('resize', () => {
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // Update circuit background shader resolution
+  if (circuitMaterial) {
+    circuitMaterial.uniforms.resolution.value.set(sizes.width, sizes.height);
+  }
+});
+
+// cleanup to ensure proper resource management when the page is unloaded
+window.addEventListener('beforeunload', () => {
+  audioManager.dispose();
+});
+
+// Animation loop
+const clock = new THREE.Clock();
+
+const tick = () => {
+  const deltaTime = clock.getDelta();
+  const elapsedTime = clock.getElapsedTime();
+
+  // Update controls
+  controls.update();
+
+  // Calculate current polar angle (vertical angle)
+  const polarAngle = controls.getPolarAngle();
+
+  // If we're within 0.05 radians of the max angle and models aren't loaded yet, load them
+  if (Math.abs(polarAngle - controls.maxPolarAngle) < 0.05 && !newModelsLoaded) {
+    loadNewModels();
+  }
+
+  // If models are loaded, handle opacity for both models and background
+  if (newModelsLoaded && newModels.length > 0) {
+    // Fade in the models first
+    if (newModelsOpacity < 1.0) {
+      newModelsOpacity = Math.min(newModelsOpacity + 0.005, 1);
+
+      // Update all models' opacity (but only for fully visible models)
+      newModels.forEach(model => {
+        if (model.userData.fadeState === 'visible') {
+          model.traverse((node) => {
+            if (node.isMesh && node.material) {
+              if (Array.isArray(node.material)) {
+                node.material.forEach(material => {
+                  material.opacity = newModelsOpacity;
+                });
+              } else {
+                node.material.opacity = newModelsOpacity;
+              }
+            }
+          });
+        }
+      });
+
+      // Initialize circuit background only after models start to become visible
+      if (newModelsOpacity > 0.1 && !circuitBackgroundEnabled) {
+        setupCircuitBackground();
+      }
+    }
+
+    // Once models have started to appear and circuit background is initialized,
+    // begin fading in the circuit background
+    if (newModelsOpacity > 0.2 && circuitMaterial && circuitBackgroundOpacity < 0.8) {
+      // Fade in more slowly than the models
+      circuitBackgroundOpacity = Math.min(circuitBackgroundOpacity + 0.003, 0.8);
+      circuitMaterial.uniforms.opacity.value = circuitBackgroundOpacity;
+    }
+  }
+
+  // Update circuit shader time uniform - do this ONLY once per frame
+  if (circuitMaterial) {
+    circuitMaterial.uniforms.time.value = elapsedTime;
+  }
+
+  // Update original model animation
+  if (mixer) {
+    // Explicitly set the time scale to the original value
+    mixer.timeScale = originalAnimationTimeScale;
+    mixer.update(deltaTime);
+  }
+
+  // Update orbiting models' positions and check for collisions
+  if (newModelsLoaded && newModels.length > 0) {
+    // First update all positions
+    newModels.forEach(model => {
+      // Update orbit angle
+      model.userData.orbitAngle += model.userData.orbitSpeed * deltaTime;
+
+      // Calculate new position in orbit
+      const newX = Math.cos(model.userData.orbitAngle) * model.userData.orbitRadius + mainModelPosition.x;
+      const newZ = Math.sin(model.userData.orbitAngle) * model.userData.orbitRadius + mainModelPosition.z;
+
+      // Update model position
+      model.position.x = newX;
+      model.position.z = newZ;
+
+      // Make the model face the camera
+      model.lookAt(camera.position);
+
+      // Update animation mixer if exists
+      if (model.userData.mixer) {
+        model.userData.mixer.update(deltaTime);
+      }
+
+      // Update fade animations
+      updateModelFade(model, deltaTime);
+    });
+
+
+
+    // Update original model animation
+    if (mixer) mixer.update(deltaTime);
+
+    // Update controls
+    controls.update();
+
+    // Calculate current polar angle (vertical angle)
+    const polarAngle = controls.getPolarAngle();
+
+    // If we're within 0.05 radians of the max angle and models aren't loaded yet, load them
+    if (Math.abs(polarAngle - controls.maxPolarAngle) < 0.05 && !newModelsLoaded) {
+      loadNewModels();
+    }
+
+    // If models are loaded, handle opacity for both models and background
+    if (newModelsLoaded && newModels.length > 0) {
+      // Fade in the models first
+      if (newModelsOpacity < 0.7) {
+        newModelsOpacity = Math.min(newModelsOpacity + 0.005, 0.7);
+
+        // Update all models' opacity (but only for fully visible models)
+        newModels.forEach(model => {
+          if (model.userData.fadeState === 'visible') {
+            model.traverse((node) => {
+              if (node.isMesh && node.material) {
+                if (Array.isArray(node.material)) {
+                  node.material.forEach(material => {
+                    material.opacity = newModelsOpacity;
+                  });
+                } else {
+                  node.material.opacity = newModelsOpacity;
+                }
+              }
+            });
+          }
+        });
+      }
+
+
+      // Once models have started to appear, begin fading in the circuit background
+      if (newModelsOpacity > 0.2 && circuitMaterial && circuitBackgroundOpacity < 0.8) {
+        // Fade in more slowly than the models
+        circuitBackgroundOpacity = Math.min(circuitBackgroundOpacity + 0.003, 0.8);
+        circuitMaterial.uniforms.opacity.value = circuitBackgroundOpacity;
+      }
+    }
+
+
+    // Update circuit shader time uniform if it exists
+    if (circuitMaterial) {
+      circuitMaterial.uniforms.time.value = elapsedTime;
+    }
+
+
+    // Update orbiting models' positions and check for collisions
+    if (newModelsLoaded && newModels.length > 0) {
+      // First update all positions
+      newModels.forEach(model => {
+        // Update orbit angle
+        model.userData.orbitAngle += model.userData.orbitSpeed * deltaTime;
+
+        // Calculate new position in orbit
+        const newX = Math.cos(model.userData.orbitAngle) * model.userData.orbitRadius + mainModelPosition.x;
+        const newZ = Math.sin(model.userData.orbitAngle) * model.userData.orbitRadius + mainModelPosition.z;
+
+        // Update model position
+        model.position.x = newX;
+        model.position.z = newZ;
+
+        // Make the model face the camera
+        model.lookAt(camera.position);
+
+        // Update animation mixer if exists
+        if (model.userData.mixer) {
+          model.userData.mixer.update(deltaTime);
+        }
+
+        // Update fade animations
+        updateModelFade(model, deltaTime);
+      });
+
+      // Then check for collisions and handle visibility (doing this separately to ensure all positions are updated first)
+      for (let i = 0; i < newModels.length; i++) {
+        for (let j = i + 1; j < newModels.length; j++) {
+          // Check collision state between these two models
+          const isColliding = checkCollision(newModels[i], newModels[j]);
+
+          // Handle current collisions (make objects invisible)
+          if (isColliding) {
+            // Only initiate a collision response if both models are visible or fading in
+            if ((newModels[i].userData.fadeState === 'visible' || newModels[i].userData.fadeState === 'fading-in') &&
+              (newModels[j].userData.fadeState === 'visible' || newModels[j].userData.fadeState === 'fading-in')) {
+              handleCollision(newModels[i], newModels[j]);
+            }
+          }
+          // Handle collision resolution (allow invisible objects to become visible again)
+          else {
+            // Get references to each model
+            const modelA = newModels[i];
+            const modelB = newModels[j];
+
+            // Determine which model is the faster one (the one that would've faded out)
+            const speedA = Math.abs(modelA.userData.orbitSpeed);
+            const speedB = Math.abs(modelB.userData.orbitSpeed);
+            const fasterModel = speedA > speedB ? modelA : modelB;
+
+            // If the faster model is invisible (during collision), start fading it back in
+            if (fasterModel.userData.fadeState === 'invisible') {
+              // Check if the other model isn't colliding with anything else
+              let canFadeIn = true;
+
+              // Check this model against all other models to ensure no other collisions exist
+              for (let k = 0; k < newModels.length; k++) {
+                if (k !== i && k !== j) {
+                  if (checkCollision(fasterModel, newModels[k])) {
+                    canFadeIn = false;
+                    break;
+                  }
+                }
+              }
+
+              // If no other collisions, start fading back in
+              if (canFadeIn) {
+                fasterModel.userData.fadeState = 'fading-in';
+                fasterModel.userData.fadeProgress = 0;
+                console.log(`Collision resolved! ${fasterModel.userData.configKey} is fading back in.`);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Store current camera position for next frame
+    previousCameraPosition.copy(camera.position);
+
+  }
+
+  renderer.render(scene, camera);
+  window.requestAnimationFrame(tick);
+};
+
+tick();
