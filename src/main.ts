@@ -56,3 +56,28 @@ const audioManager = new AudioManager('/theme.mp3', {
   maxVolume: 0.5,        // Sets a moderate maximum volume
   fadeInDuration: 10000  // Gradually increases volume over 10 seconds
 });
+
+// Get the canvas element for rendering
+const canvas = document.querySelector('canvas.webgl');
+
+// Set up the 3D scene with camera, renderer, and initial configuration
+const scene = new THREE.Scene();
+
+// Define screen sizes for responsive rendering
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+};
+
+// Create perspective camera with wide field of view
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+camera.position.z = 3;
+camera.position.x = 0;
+camera.position.y = 6;
+scene.add(camera);
+
+// Set up WebGL renderer for high-quality graphics
+const renderer = new THREE.WebGLRenderer({ canvas });
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
