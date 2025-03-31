@@ -50,3 +50,9 @@ function setupCircuitBackground() {
 
   console.log('Circuit background shader successfully initialized');
 }
+
+// Manages background music with fade-in effect
+const audioManager = new AudioManager('/theme.mp3', {
+  maxVolume: 0.5,        // Sets a moderate maximum volume
+  fadeInDuration: 10000  // Gradually increases volume over 10 seconds
+});
