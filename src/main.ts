@@ -81,3 +81,17 @@ const renderer = new THREE.WebGLRenderer({ canvas });
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+// Configure orbit controls for interactive camera movement
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+// Restrict camera interaction for a more controlled experience
+controls.enablePan = false; // Disable panning
+controls.minPolarAngle = Math.PI * 0.5 - THREE.MathUtils.degToRad(15); // Limit vertical rotation
+controls.maxPolarAngle = Math.PI * 0.5 + THREE.MathUtils.degToRad(15);
+controls.minAzimuthAngle = -Math.PI * 0.5; // Limit horizontal rotation
+controls.maxAzimuthAngle = Math.PI * 0.5;
+controls.minDistance = 3;  // Minimum zoom distance
+controls.maxDistance = 4;  // Maximum zoom distance
+
