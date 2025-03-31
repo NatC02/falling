@@ -95,3 +95,98 @@ controls.maxAzimuthAngle = Math.PI * 0.5;
 controls.minDistance = 3;  // Minimum zoom distance
 controls.maxDistance = 4;  // Maximum zoom distance
 
+// Tracking variables for scene loading and model management
+let newModelsLoaded = false;
+let newModelsOpacity = 0;
+let newModels = [];
+let mainModelPosition = new THREE.Vector3(); // Stores main model's position for orbital calculations
+let previousCameraPosition = new THREE.Vector3();
+
+// Preloading state management
+let preloadingComplete = false;
+let mainModelLoaded = false;
+let totalModelsToLoad = 8; // Main model + 7 character models
+let loadedModelsCount = 0;
+let preloadedModels = {}; // Stores preloaded 3D models by filename
+
+// Parameters for model interactions and visibility
+const collisionThreshold = 2.0; // Distance to consider models as colliding
+const fadeOutDuration = 0.5; // Time to fade out a model
+const fadeInDuration = 0.5; // Time to fade in a model
+const minVisibilityTime = 1.0; // Minimum time a model should remain visible
+
+// Configuration for orbital model behaviors
+const orbitConfig = {
+  model1: {
+    radius: 2,    // Distance from center
+    speed: 0.3,   // Rotation speed
+    height: 1,   // Vertical offset from center
+    fileName: '/character/colin2.glb', // Different model file
+    collisionRadius: 0.6, // Collision radius for this model
+    fadeState: 'visible', // Current fade state: 'visible', 'fading-out', 'invisible', 'fading-in'
+    fadeProgress: 0,      // Progress of current fade (0-1)
+    lastCollisionTime: 0  // Timestamp of last collision
+  },
+  model2: {
+    radius: 2,
+    speed: 0.4,
+    height: 1,
+    fileName: '/character/mr-toad2.glb', // Different model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  },
+  model3: {
+    radius: 2,
+    speed: 0.2,
+    height: 1,
+    fileName: '/character/snow-white2.glb', // Different model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  },
+  // Added new models
+  model4: {
+    radius: 2.2,   // Slightly different radius to create varied orbits
+    speed: 0.35,  // Speed within limit of 3
+    height: 1,
+    fileName: '/character/beauty2.glb', // New model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  },
+  model5: {
+    radius: 2.4,
+    speed: 0.45,  // Speed within limit of 3
+    height: 1,
+    fileName: '/character/bufkin2.glb', // New model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  },
+  model6: {
+    radius: 2.6,
+    speed: 0.25,  // Speed within limit of 3
+    height: 1,
+    fileName: '/character/beast2.glb', // New model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  },
+  model7: {
+    radius: 2.8,
+    speed: 0.5,   // Speed within limit of 3
+    height: 1,
+    fileName: '/character/bloody-mary2.glb', // New model file
+    collisionRadius: 0.6,
+    fadeState: 'visible',
+    fadeProgress: 0,
+    lastCollisionTime: 0
+  }
+};
+
