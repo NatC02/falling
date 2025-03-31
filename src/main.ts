@@ -190,3 +190,221 @@ const orbitConfig = {
   }
 };
 
+// Preload all 3D models before starting the scene
+function preloadAllModels() {
+  // Create an interactive loading screen with progress bar
+  // ... (loading screen creation logic)
+  const loadingScreen = document.createElement('div');
+  loadingScreen.id = 'loading-screen';
+  loadingScreen.style.position = 'fixed';
+  loadingScreen.style.top = '0';
+  loadingScreen.style.left = '0';
+  loadingScreen.style.width = '100%';
+  loadingScreen.style.height = '100%';
+  loadingScreen.style.background = 'rgba(0, 0, 0, 0.8)';
+  loadingScreen.style.display = 'flex';
+  loadingScreen.style.flexDirection = 'column';
+  loadingScreen.style.justifyContent = 'center';
+  loadingScreen.style.alignItems = 'center';
+  loadingScreen.style.zIndex = '1000';
+
+  const loadingText = document.createElement('div');
+  loadingText.textContent = 'Loading assets...';
+  loadingText.style.color = 'white';
+  loadingText.style.fontSize = '24px';
+  loadingText.style.marginBottom = '20px';
+
+  const progressBarContainer = document.createElement('div');
+  progressBarContainer.style.width = '70%';
+  progressBarContainer.style.height = '20px';
+  progressBarContainer.style.border = '1px solid white';
+  progressBarContainer.style.borderRadius = '5px';
+
+  const progressBar = document.createElement('div');
+  progressBar.style.width = '0%';
+  progressBar.style.height = '100%';
+  progressBar.style.background = '#447EFF';
+  progressBar.style.borderRadius = '4px';
+  progressBar.style.transition = 'width 0.3s ease-in-out';
+
+  progressBarContainer.appendChild(progressBar);
+  loadingScreen.appendChild(loadingText);
+  loadingScreen.appendChild(progressBarContainer);
+  document.body.appendChild(loadingScreen);
+
+  // Update progress bar function
+  function updateProgress() {
+    const progress = (loadedModelsCount / totalModelsToLoad) * 100;
+    progressBar.style.width = progress + '%';
+    loadingText.textContent = `Loading assets... ${Math.round(progress)}%`;
+
+    // When all models are loaded, hide the loading screen and start the animation
+    if (loadedModelsCount >= totalModelsToLoad) {
+      setTimeout(() => {
+        loadingScreen.style.opacity = 0;
+        loadingScreen.style.transition = 'opacity 0.5s ease-in-out';
+        setTimeout(() => {
+          document.body.removeChild(loadingScreen);
+        }, 500);
+        preloadingComplete = true;
+        console.log('All models preloaded successfully');
+      }, 500); // Give a slight delay for user to see 100%
+    }
+  }
+
+  // Start preloading all models
+  const loader = new GLTFLoader();
+
+  // First load the main model
+  loader.load('/falling.glb', (gltf) => {
+    // Store the preloaded model
+    preloadedModels['/falling.glb'] = gltf;
+    loadedModelsCount++;
+    mainModelLoaded = true;
+
+    // Add it to the scene immediately since it's the main model
+    const gltfModel = gltf.scene;
+    mainModel = gltfModel;
+    scene.add(gltfModel);
+
+    // Store the position of the main model for orbiting
+    mainModelPosition.copy(gltfModel.position);
+
+    if (gltf.animations && gltf.animations.length > 0) {
+      mixer = new THREE.AnimationMixer(gltf.scene);
+      const animationClip = gltf.animations[0];
+
+      const action = mixer.clipAction(animationClip);
+      action.setLoop(THREE.LoopRepeat); // Loop the animation repeatedly
+      action.play();
+
+      // Store the original time scale to maintain consistent speed
+      originalAnimationTimeScale = action.getEffectiveTimeScale();
+
+      // Ensure the time scale is preserved even after circuit shader initialization
+      mixer.timeScale = originalAnimationTimeScale;
+    }
+
+
+    updateProgress();
+
+    // Now preload all the character models
+    const modelKeys = Object.keys(orbitConfig);
+    modelKeys.forEach((key) => {
+      const config = orbitConfig[key];
+      loader.load(config.fileName, (gltf) => {
+        // Store the preloaded model
+        preloadedModels[config.fileName] = gltf;
+        loadedModelsCount++;
+        updateProgress();
+      },
+        // Progress callback
+        (xhr) => {
+          // We could show individual model loading progress here if needed
+        },
+        // Error callback
+        (error) => {
+          console.error(`Error loading ${config.fileName}:`, error);
+          // Still increment to avoid hanging the loading screen
+          loadedModelsCount++;
+          updateProgress();
+        });
+    });
+  },
+    // Progress callback for main model
+    (xhr) => {
+      // We could show main model loading progress here if needed
+    },
+    // Error callback for main model 
+    (error) => {
+      console.error('Error loading main model:', error);
+      loadedModelsCount++;
+      updateProgress();
+    });
+}
+
+// Load new models when camera reaches specific position
+function loadNewModels() {
+  if (newModelsLoaded) return;
+
+  newModelsLoaded = true;
+  console.log('Preparing orbital character models...');
+
+  // Start background music with fade-in
+  audioManager.play();
+
+  // Prepare and position orbital models
+  // Store initial camera position for calculations
+  previousCameraPosition.copy(camera.position);
+
+  // Use preloaded models instead of loading them again
+  const modelKeys = Object.keys(orbitConfig);
+
+  modelKeys.forEach((key, index) => {
+    const config = orbitConfig[key];
+
+    // Check if we have this model preloaded
+    if (preloadedModels[config.fileName]) {
+      const gltf = preloadedModels[config.fileName];
+
+      // Initial position on the orbit (spaced evenly around the circle)
+      const angle = (index / modelKeys.length) * Math.PI * 2;
+      const x = Math.cos(angle) * config.radius + mainModelPosition.x;
+      const z = Math.sin(angle) * config.radius + mainModelPosition.z;
+
+      // Clone the preloaded model to avoid modifying the original
+      const model = gltf.scene.clone();
+
+      // Set initial position on the orbit path
+      model.position.set(x, config.height, z);
+      model.scale.set(1.8, 1.8, 1.8); // Adjust scale as needed
+
+      // Store orbit parameters and collision parameters in userData for animation
+      model.userData.orbitRadius = config.radius;
+      model.userData.orbitSpeed = config.speed;
+      model.userData.orbitHeight = config.height;
+      model.userData.orbitAngle = angle; // Starting angle
+      model.userData.collisionRadius = config.collisionRadius;
+      model.userData.fadeState = config.fadeState;
+      model.userData.fadeProgress = config.fadeProgress;
+      model.userData.lastCollisionTime = config.lastCollisionTime;
+      model.userData.configKey = key; // Store reference to the config key
+
+      // Make all materials translucent with 0 opacity initially (for fade in)
+      model.traverse((node) => {
+        if (node.isMesh && node.material) {
+          if (Array.isArray(node.material)) {
+            node.material.forEach(material => {
+              material = material.clone();
+              material.transparent = true;
+              material.opacity = 0;
+            });
+          } else {
+            node.material = node.material.clone();
+            node.material.transparent = true;
+            node.material.opacity = 0;
+          }
+        }
+      });
+
+      // Add model to scene and to our tracking array
+      scene.add(model);
+      newModels.push(model);
+
+      // Set up animation if it exists
+      if (gltf.animations && gltf.animations.length > 0) {
+        const newMixer = new THREE.AnimationMixer(model);
+        const animationClip = gltf.animations[0];
+
+        const action = newMixer.clipAction(animationClip);
+        action.setLoop(THREE.LoopRepeat);
+        action.play();
+
+        // Store the mixer in the model for updating
+        model.userData.mixer = newMixer;
+      }
+    } else {
+      console.error(`Model ${config.fileName} was not preloaded`);
+    }
+  });
+}
