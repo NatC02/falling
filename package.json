@@ -1,5 +1,5 @@
 {
-  "name": "20-vite",
+  "name": "falling",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,10 +14,6 @@
     "vite": "^3.0.7"
   },
   "dependencies": {
-    "lil-gui": "^0.16.1",
-    "maath": "^0.10.8",
-    "three": "^0.143.0",
-    "three-kawase-blur": "github:ycw/three-kawase-blur",
-    "three-manga": "^1.1.0"
+    "three": "^0.143.0"
   }
 }
